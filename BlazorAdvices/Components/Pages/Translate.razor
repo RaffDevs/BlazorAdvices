@@ -1,0 +1,59 @@
+@page "/translate/{adviceid:int}"
+@using BlazorAdvices.Models.DTOs
+@inject AdviceState AdviceState
+@inject TranslatorService TranslatorService
+@inject IJSRuntime JsRuntime
+
+
+<PageTitle>Translate</PageTitle>
+<MudGrid Spacing="12">
+    <MudItem xs="12" Class="mt-12">
+        <MudText Typo="Typo.h3" Align="Align.Center">Translate</MudText>
+    </MudItem>
+    <MudItem xs="12">
+        <MudCard>
+            <MudCardContent >
+                <MudStack AlignItems="AlignItems.Center">
+                    @if (IsProcessing)
+                    {
+                        <MudText Typo="Typo.body1">Traduzindo...</MudText>
+                        <MudProgressLinear Color="Color.Primary" Indeterminate="true"  />
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.body1">@TranslatedAdvice</MudText>
+                    }
+                </MudStack>
+            </MudCardContent>
+        </MudCard>
+        <MudIconButton OnClick="GoBack" Class="mt-4" Icon="@Icons.Material.Filled.ArrowBack" />
+        </MudItem>
+</MudGrid>
+
+@code {
+    [Parameter] public int AdviceId { get; set; }
+
+    private AdviceDTO? Advice { get; set; }
+    private string TranslatedAdvice { get; set; } = string.Empty;
+    private bool IsProcessing { get; set; } = true;
+    
+    protected override async Task OnParametersSetAsync()
+    {
+        Advice = AdviceState.FavoriteAdvices
+            .FirstOrDefault(adv => adv.SlipId == AdviceId);
+
+        if (Advice is not null)
+        {
+            var result = await TranslatorService.Translate(Advice.Advice);
+            TranslatedAdvice = result.Text;
+            IsProcessing = false;
+        }
+
+    }
+
+    private async Task GoBack()
+    {
+       await JsRuntime.InvokeVoidAsync("goBack");
+    }
+
+}

@@ -1,0 +1,68 @@
+@page "/favorites"
+@using BlazorAdvices.Data.Entities
+@using BlazorAdvices.Data.Extensions
+@using BlazorAdvices.Models.DTOs
+@inject NavigationManager NavigationManager
+@inject AdviceState AdviceState
+@inject HttpClient HttpClient
+@inject ISnackbar Snackbar
+
+
+<PageTitle>Favorite Advices</PageTitle>
+<MudGrid Spacing="12">
+    <MudItem xs="12" Class="mt-12">
+        <MudText Typo="Typo.h3" Align="Align.Center">Favorites</MudText>
+    </MudItem>
+    <MudItem xs="12">
+        @if (AdviceState.FavoriteAdvices.Any())
+        {
+            @foreach (var advice in AdviceState.FavoriteAdvices)
+            {
+                <AdviceCard 
+                    Advice="advice" 
+                    StyleClass="my-4" 
+                    OnDelete="() => HandleDelete(advice)"
+                    />
+            }
+        }
+        else
+        {
+            <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-7"/>
+        }
+    </MudItem>
+</MudGrid>
+
+@code {
+
+    protected override async Task OnInitializedAsync()
+    {
+        await GetFavoriteAdvices();
+    }
+
+    private async Task GetFavoriteAdvices()
+    {
+        var route = NavigationManager.BaseUri + "advice";
+        var request = await HttpClient.GetAsync(route);
+        if (!request.IsSuccessStatusCode) return;
+        var content = await request.Content.ReadFromJsonAsync<List<Advice>>();
+        AdviceState.FavoriteAdvices = content.Select(adv => adv.MapToDTO()).ToList();
+    }
+
+    private async void HandleDelete(AdviceDTO advice)
+    {
+        var route = new UriBuilder(NavigationManager.BaseUri)
+        {
+            Path = $"advice/{advice.SlipId}"
+        };
+        var request = await HttpClient.DeleteAsync(route.Uri);
+        if (request.IsSuccessStatusCode)
+        {
+            await GetFavoriteAdvices();
+            StateHasChanged();
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.BottomEnd;
+            Snackbar.Configuration.VisibleStateDuration = 2000;
+            Snackbar.Add("Success", Severity.Success);
+        }
+    }
+
+}

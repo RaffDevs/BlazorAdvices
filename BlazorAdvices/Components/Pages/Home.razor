@@ -1,7 +1,97 @@
 ﻿@page "/"
+@inject AdviceState State
+@inject AdviceService AdviceService
+@inject NavigationManager NavigationManager
+@inject HttpClient HttpClient
+@inject ISnackbar Snackbar
+
+
 
 <PageTitle>Home</PageTitle>
 
-<h1>Hello, world!</h1>
+<MudGrid Spacing="12">
+    <MudItem xs="12" Class="mt-12">
+        <MudText Typo="Typo.h3" Align="Align.Center">Advices</MudText>
+    </MudItem>
+    <MudItem xs="12">
+        <MudPaper Class="mx-16 pa-4" Height="8rem">
+            <MudStack Row="true" Justify="Justify.Center" AlignItems="AlignItems.Center" Style="height: 100%">
+                @if (State.CurrentAdvice is null)
+                {
+                    <MudSkeleton SkeletonType="SkeletonType.Text" Animation="Animation.Wave" Width="80%"/>
+                }
+                else
+                {
+                    <MudText Align="Align.Center">@State.CurrentAdvice.Advice</MudText>
+                }
+            </MudStack>
+        </MudPaper>
+        <MudStack Row="true" Justify="Justify.Center" Class="pt-4">
+            <MudIconButton OnClick="FavoriteAdvice" Color="@_favColorButton" Icon="@Icons.Material.Filled.Favorite" Size="Size.Medium"/>
+        </MudStack>
+    </MudItem>
+    <MudItem xs="12">
+        <MudStack Row="true" Justify="Justify.Center">
+            <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="GetAdvice" Style="width: 8rem">
+                @if (State.IsProcessing)
+                {
+                    <MudProgressCircular Class="ms-n1 white-text" Size="Size.Small" Indeterminate="true"/>
+                }
+                else
+                {
+                    <MudText> Get Advice</MudText>
+                }
+            </MudButton>
+        </MudStack>
+    </MudItem>
+</MudGrid>
 
-Welcome to your new app.
+
+@code
+{
+    private Color _favColorButton = Color.Default;
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            Console.WriteLine("Call AfterRender");
+            State.CurrentAdvice = await AdviceService.GetRandomAdvice();
+            StateHasChanged();
+            Console.WriteLine("Finish AfterRender");
+        }
+    }
+
+    private async Task GetAdvice()
+    {
+        State.ToggleIsProcessing();
+        State.CurrentAdvice = await AdviceService.GetRandomAdvice();
+        State.ToggleIsProcessing();
+        _favColorButton = Color.Default;
+        StateHasChanged();
+    }
+
+    private async Task FavoriteAdvice()
+    {
+        var route = NavigationManager.BaseUri + "advice";
+        Snackbar.Clear();
+        Snackbar.Configuration.PositionClass = Defaults.Classes.Position.BottomEnd;
+        Snackbar.Add("Sending data", Severity.Info);
+        var request = await HttpClient.PostAsJsonAsync(route, State.CurrentAdvice);
+        if (request.IsSuccessStatusCode)
+        {
+            Snackbar.Clear();
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.BottomEnd;
+            Snackbar.Add("Advice has been saved!", Severity.Success);
+            _favColorButton = Color.Error;
+            return;
+        }
+
+        var errorString = await request.Content.ReadAsStringAsync();
+        Snackbar.Clear();
+        Snackbar.Configuration.PositionClass = Defaults.Classes.Position.BottomEnd;
+        Snackbar.Add("Error", Severity.Error);
+        Console.WriteLine(errorString);
+    }
+    
+}

@@ -1,0 +1,61 @@
+@using BlazorAdvices.Models.DTOs
+@inject IDialogService DialogService
+@inject NavigationManager NavigationManager
+
+<MudCard Class="@StyleClass">
+    <MudCardContent>
+        <MudText Typo="Typo.body2">@Advice.Advice</MudText>
+    </MudCardContent>
+    <MudCardActions >
+        <MudStack Row="true" Justify="Justify.SpaceBetween" Style="width: 100%">
+            <MudIconButton OnClick="GoToTranslate" Icon="@Icons.Material.Filled.Translate" Variant="Variant.Text" Color="Color.Primary">Learn More</MudIconButton>
+            <MudIconButton OnClick="ExecuteDelete" Icon="@Icons.Material.Filled.Delete" Variant="Variant.Text" Color="Color.Error">Learn More</MudIconButton>
+        </MudStack>
+    </MudCardActions>
+</MudCard>
+@code {
+    [Parameter]
+    public string StyleClass { get; set; }
+        
+    [Parameter]
+    public AdviceDTO Advice { get; set; }
+    
+    [Parameter]
+    public EventCallback<AdviceDTO> OnDelete { get; set; }
+    
+    [Parameter]
+    public EventCallback<AdviceDTO> OnTranslate { get; set; }
+    
+    private async Task ShowDeleteDialog()
+    {
+        var dialog = await DialogService.ShowAsync<AdviceDialogDelete>("Delete Advice");
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            if (OnDelete.HasDelegate)
+            {
+               await OnDelete.InvokeAsync();
+            }
+        }
+    }
+
+    private async void ExecuteDelete()
+    {
+        await ShowDeleteDialog();
+    }
+
+    private async void ExecuteTranslate()
+    {
+        if (OnTranslate.HasDelegate)
+        {
+            await OnTranslate.InvokeAsync();
+        }
+    }
+
+    private void GoToTranslate()
+    {
+        var route = NavigationManager.BaseUri + $"translate/{Advice.SlipId}";
+        NavigationManager.NavigateTo(route);
+    }
+}
